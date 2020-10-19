@@ -1,5 +1,7 @@
 #include <stdlib.h>
 
+#include <stdio.h>
+
 #ifdef TARGET_WEB
 #include <emscripten.h>
 #include <emscripten/html5.h>
@@ -9,6 +11,8 @@
 
 #include "game/memory.h"
 #include "audio/external.h"
+
+
 
 #include "gfx/gfx_pc.h"
 #include "gfx/gfx_opengl.h"
@@ -33,6 +37,9 @@
 #include "compat.h"
 
 #define CONFIG_FILE "sm64config.txt"
+
+// Mod API stuff
+#include "engine_mod_iface.h"
 
 OSMesg D_80339BEC;
 OSMesgQueue gSIEventMesgQueue;
@@ -68,8 +75,6 @@ void send_display_list(struct SPTask *spTask) {
     gfx_run((Gfx *)spTask->task.t.data_ptr);
 }
 
-#define printf
-
 #ifdef VERSION_EU
 #define SAMPLES_HIGH 656
 #define SAMPLES_LOW 640
@@ -81,6 +86,7 @@ void send_display_list(struct SPTask *spTask) {
 void produce_one_frame(void) {
     gfx_start_frame();
     game_loop_one_iteration();
+	mod_frame_all();
     
     int samples_left = audio_api->buffered();
     u32 num_audio_samples = samples_left < audio_api->get_desired_buffered() ? SAMPLES_HIGH : SAMPLES_LOW;
@@ -141,6 +147,8 @@ static void on_fullscreen_changed(bool is_now_fullscreen) {
 }
 
 void main_func(void) {
+	
+	
 #ifdef USE_SYSTEM_MALLOC
     main_pool_init();
     gGfxAllocOnlyPool = alloc_only_pool_init();
@@ -149,6 +157,8 @@ void main_func(void) {
     main_pool_init(pool, pool + sizeof(pool) / sizeof(pool[0]));
 #endif
     gEffectsMemoryPool = mem_pool_init(0x4000, MEMORY_POOL_LEFT);
+
+	mod_load_all();
 
     configfile_load(CONFIG_FILE);
     atexit(save_config);
@@ -209,6 +219,9 @@ void main_func(void) {
     sound_init();
 
     thread5_game_loop(NULL);
+	
+	mod_init_all();
+	
 #ifdef TARGET_WEB
     /*for (int i = 0; i < atoi(argv[1]); i++) {
         game_loop_one_iteration();
@@ -222,6 +235,14 @@ void main_func(void) {
 #endif
 }
 
+int main(UNUSED int argc, UNUSED char *argv[]) {
+	printf("main()\n");
+	printf("main()\n");
+    main_func();
+    return 0;
+}
+
+#if 0
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 int WINAPI WinMain(UNUSED HINSTANCE hInstance, UNUSED HINSTANCE hPrevInstance, UNUSED LPSTR pCmdLine, UNUSED int nCmdShow) {
@@ -233,4 +254,5 @@ int main(UNUSED int argc, UNUSED char *argv[]) {
     main_func();
     return 0;
 }
+#endif
 #endif

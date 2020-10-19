@@ -34,8 +34,11 @@ ifeq ($(TARGET_N64),0)
     ifeq ($(OS),Windows_NT)
       TARGET_WINDOWS := 1
     else
+	  # Cross-compile hack
+      MINGW = i686-w64-mingw32
+      TARGET_WINDOWS := 1
       # TODO: Detect Mac OS X, BSD, etc. For now, assume Linux
-      TARGET_LINUX := 1
+      #TARGET_LINUX := 1
     endif
   endif
 
@@ -431,6 +434,8 @@ else
   CC := emcc
 endif
 ifeq ($(TARGET_WINDOWS),1)
+  CC = $(MINGW)-gcc
+  CXX = $(MINGW)-g++
   LD := $(CXX)
 else
   LD := $(CC)
@@ -443,7 +448,8 @@ PYTHON := python3
 # Platform-specific compiler and linker flags
 ifeq ($(TARGET_WINDOWS),1)
   PLATFORM_CFLAGS  := -DTARGET_WINDOWS
-  PLATFORM_LDFLAGS := -lm -lxinput9_1_0 -lole32 -no-pie -mwindows
+  PLATFORM_LDFLAGS := -lm -lxinput9_1_0 -lole32 -lpthread -no-pie -Wl,-subsystem,console
+  # -mwindows
 endif
 ifeq ($(TARGET_LINUX),1)
   PLATFORM_CFLAGS  := -DTARGET_LINUX `pkg-config --cflags libusb-1.0`
@@ -784,8 +790,8 @@ $(GLOBAL_ASM_DEP).$(NON_MATCHING):
 	touch $@
 
 $(BUILD_DIR)/%.o: %.cpp
-	@$(CXX) -fsyntax-only $(CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/$*.d $<
-	$(CXX) -c $(CFLAGS) -o $@ $<
+	@$(CXX) -fsyntax-only $(CFLAGS) -std=c++17 -MMD -MP -MT $@ -MF $(BUILD_DIR)/$*.d $<
+	$(CXX) -c $(CFLAGS) -std=c++17 -o $@ $<
 
 $(BUILD_DIR)/%.o: %.c
 	@$(CC_CHECK) $(CC_CHECK_CFLAGS) -MMD -MP -MT $@ -MF $(BUILD_DIR)/$*.d $<
